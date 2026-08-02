@@ -32,8 +32,13 @@ export interface PhotoRecord {
   id: string;
   filename: string;
   location: string;
-  /** True instant, from GPSDateStamp + GPSTimeStamp, which are UTC by EXIF spec. */
+  /** True instant in UTC. */
   tUtc: string;
+  /**
+   * Which tags produced tUtc. 'gps' is UTC by spec; 'exif-offset' is
+   * DateTimeOriginal combined with OffsetTimeOriginal. Both are exact.
+   */
+  timeSource: 'gps' | 'exif-offset';
   lat: number;
   lon: number;
   /** Metres above sea level, when GPSAltitude was present. */
@@ -55,6 +60,8 @@ export interface SkippedPhoto {
 
 export type SkipReason =
   | 'no-exif'
+  /** GPS tags are present but their values were blanked out before upload. */
+  | 'gps-redacted'
   | 'no-gps-coords'
   | 'no-gps-time'
   | 'unreadable'

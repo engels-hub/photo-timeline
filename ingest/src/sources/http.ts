@@ -22,8 +22,8 @@ export interface HttpSourceOptions {
  */
 export class HttpSource implements PhotoSource {
   readonly kind = 'http';
-  private readonly headers: Record<string, string>;
-  private readonly fetchImpl: typeof fetch;
+  protected readonly headers: Record<string, string>;
+  protected readonly fetchImpl: typeof fetch;
   private partialRead: boolean | undefined;
 
   constructor(private readonly options: HttpSourceOptions) {
@@ -31,8 +31,16 @@ export class HttpSource implements PhotoSource {
     this.fetchImpl = options.fetchImpl ?? fetch;
   }
 
-  private get listingUrl(): string {
+  protected get listingUrl(): string {
     return this.options.listUrl ?? this.options.baseUrl;
+  }
+
+  /** Subclasses fetch through this so configured auth headers are always sent. */
+  protected fetchWithHeaders(url: string, init: RequestInit = {}): Promise<Response> {
+    return this.fetchImpl(url, {
+      ...init,
+      headers: { ...this.headers, ...(init.headers as Record<string, string>) },
+    });
   }
 
   async *list(): AsyncIterable<PhotoRef> {

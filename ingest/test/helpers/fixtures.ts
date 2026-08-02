@@ -35,6 +35,11 @@ export interface FixtureSpec {
   noGpsTime?: boolean;
   /** Write no EXIF at all. */
   noExif?: boolean;
+  /**
+   * Write the GPS tags but blank their values, mimicking what Android's photo
+   * picker does to images handed to an app without ACCESS_MEDIA_LOCATION.
+   */
+  blankGps?: boolean;
 }
 
 /** Build a small JPEG carrying real EXIF, for testing without private photos. */
@@ -72,7 +77,10 @@ export async function makePhoto(spec: FixtureSpec = {}): Promise<Buffer> {
   };
 
   const gps: Record<number, unknown> = {};
-  if (!spec.noGps) {
+  if (spec.blankGps) {
+    gps[piexif.GPSIFD.GPSLatitude] = [[0, 0], [0, 0], [0, 0]];
+    gps[piexif.GPSIFD.GPSLongitude] = [[0, 0], [0, 0], [0, 0]];
+  } else if (!spec.noGps) {
     const lat = spec.lat ?? 41.3874;
     const lon = spec.lon ?? 2.1686;
     gps[piexif.GPSIFD.GPSLatitudeRef] = lat >= 0 ? 'N' : 'S';
@@ -84,7 +92,7 @@ export async function makePhoto(spec: FixtureSpec = {}): Promise<Buffer> {
       gps[piexif.GPSIFD.GPSAltitude] = [Math.round(spec.altitude * 100), 100];
     }
   }
-  if (!spec.noGpsTime && !spec.noGps) {
+  if (!spec.noGpsTime && !spec.noGps && !spec.blankGps) {
     gps[piexif.GPSIFD.GPSDateStamp] =
       `${utc.getUTCFullYear()}:${pad(utc.getUTCMonth() + 1)}:${pad(utc.getUTCDate())}`;
     gps[piexif.GPSIFD.GPSTimeStamp] = [

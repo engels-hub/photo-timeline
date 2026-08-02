@@ -8,8 +8,9 @@ as a scrubbable timeline — a travel timeline, with your photos as the pins.
 
 | Stage | State |
 |---|---|
-| Ingest: read photos → `trip.json` | **working**, 25 tests passing |
-| HTTP photo source (`upload.d0b0.lv`) | **written and tested against mock hosts**, not yet run against the real host — see below |
+| Ingest: read photos → `trip.json` | **working**, 30 tests passing |
+| HTTP photo source (`upload.d0b0.lv`) | **connected and running against the live album** |
+| Photos currently mappable | **0 of 7** — see "The blocker" below |
 | Web viewer (map, timeline, password gate) | not started |
 
 ## Quick start
@@ -79,28 +80,71 @@ always explainable:
 Expect anything sent through WhatsApp or Telegram to land in that list —
 those strip EXIF wholesale.
 
-## Connecting the real photo host
+## The blocker: photos are arriving without coordinates
 
-`upload.d0b0.lv` is **blocked by this development environment's egress policy**,
-so the adapter could not be run against it. It is built against mock hosts
-covering the four listing formats such services serve (JSON array, JSON objects,
-S3/R2 XML, HTML autoindex) and auto-detects which one it got.
+The album is connected and ingest runs against it cleanly. The problem is the
+data:
 
-Run the probe as the first step:
-
-```bash
-npm run ingest -- --probe --url https://upload.d0b0.lv/trip
+```
+0 photos mapped
+  6 skipped:
+    2 × GPS tags present but blanked out (stripped before upload)
+    3 × no GPS coordinates
+    1 × no EXIF block
 ```
 
-It reports whether the host is reachable, what content type the listing is, how
-many images were recognised, and whether range requests work. If `imagesFound`
-is 0, the listing format needs a parser added in
-`ingest/src/sources/listing.ts` — that is the only place that needs to change.
+**The upload service is not at fault.** It preserves EXIF faithfully — the Pixel
+photo still carries 67 tags including its HDR+ software build. What is missing
+is specifically the location.
 
-One thing worth checking before anything else: **whether the upload service
-re-encodes or strips EXIF on upload.** Many do. If it does, the metadata this
-project runs on is already gone by the time photos arrive there, and ingest has
-to run against the originals instead.
+On the two phone photos the GPS tags are *present but blanked*:
+
+```
+GPSLatitude  : [null, null, null]
+GPSLongitude : [null, null, null]
+OffsetTimeOriginal : "+03:00"      ← time survived intact
+```
+
+Tags left in place with their values nulled is the signature of deliberate
+redaction, not of a camera that never got a fix — a camera with no fix omits the
+tags entirely. The most likely culprit is **Android's photo picker, which
+redacts location from images handed to any app lacking the
+`ACCESS_MEDIA_LOCATION` permission** — and a browser upload page goes through
+exactly that picker. In other words, the coordinates are probably being stripped
+by the phone at the moment of upload, and the originals still have them.
+
+Worth testing: have someone upload one photo from a desktop browser, copied off
+the phone by cable or cloud sync rather than picked on the phone. If that one
+arrives with coordinates, the diagnosis is confirmed and the fix is a change of
+upload route, not of code.
+
+### What still works
+
+Timestamps are intact and unambiguous. Both phones write
+`OffsetTimeOriginal`, so `2026:07:13 15:11:16` + `+03:00` resolves to an exact
+`2026-07-13T12:11:16Z` with no guessing. If coordinates cannot be recovered,
+photos can still be placed by matching those timestamps against a GPS track
+exported from someone's phone — the "cool to have" becomes the main mechanism.
+
+## Using the album
+
+```bash
+export TRIP_AUTH_COOKIE='trip_auth=…'      # secret: never commit this
+npm run ingest -- --d0b0
+npm run ingest -- --d0b0 --folder Trip_photos --out web/public/trip.json
+```
+
+The album's API, read from the upload page's own JavaScript:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/files?folder=…` | listing → `{ files: [{ name, size, image }] }` |
+| `GET /file?folder=…&name=…` | original bytes, honours `Range` |
+| `GET /thumb?folder=…&name=…` | server-generated thumbnail |
+| `GET /thumb?big=1&…` | larger preview |
+
+The server already generates thumbnails, so the viewer can use those instead of
+this project building its own.
 
 ## Layout
 

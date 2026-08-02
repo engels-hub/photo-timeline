@@ -3,7 +3,8 @@
 A map + timeline that reads photo metadata to place each shot in space and time,
 draws the route travelled, and lets you scrub through the trip.
 
-**Ingest is built and tested. The viewer is not started.** See §5 for state.
+**Ingest is built, tested, and connected to the live album. The viewer is not
+started.** One blocking data problem is open — see R1.
 
 ---
 
@@ -15,7 +16,7 @@ Confirmed by the trip owner, and the reason each one matters:
 |---|---|
 | All photos are unique | No content hashing, no dedup pass. |
 | Discard photos lacking needed metadata | No interpolation in the core path. Every skip is still *reported*, never silent. |
-| All clocks correct; **use GPS time** | Removes timezone and clock-skew handling entirely — the single largest simplification. See §2. |
+| All clocks correct; **use GPS time** | Removes timezone and clock-skew handling entirely. In the real album GPS time turned out to be redacted along with the coordinates, so `DateTimeOriginal` + `OffsetTimeOriginal` is used as an equally exact fallback. |
 | Privacy not a concern; whole site behind a password `Mikro2026` | No EXIF stripping, no home-blurring, originals may be served directly. |
 
 Placing photos that lack metadata is explicitly **"cool to have"**, deferred to
@@ -105,15 +106,24 @@ interface PhotoSource {
 }
 ```
 
-`upload.d0b0.lv` is **blocked by this environment's egress policy** (gateway
-returned 403 to CONNECT; not retried, not routed around), so its API could not
-be inspected. Rather than guess one listing shape and be wrong, `HttpSource`
-auto-detects the four that such hosts actually serve — JSON array, JSON objects,
-S3/R2 XML, HTML autoindex — each covered by a test against an in-process mock.
+`D0b0Source` implements this against the real album. Its API was read from the
+upload page's own JavaScript, since `/trip` serves an upload UI rather than a
+listing:
 
-Pointing it at the real host is a URL change. `--probe` reports reachability,
-content type, images recognised, and range support, so the first contact with
-the real service is diagnosable rather than a guess.
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/files?folder=Trip_photos` | `{ files: [{ name, size, image }] }` |
+| `GET /file?folder=…&name=…` | original bytes; returns 206 for `Range` |
+| `GET /thumb?folder=…&name=…` (`big=1`) | server-generated previews |
+
+Photo URLs are query-string based, so the generic listing parser cannot build
+them by resolving relative paths — hence a dedicated subclass. The generic
+`HttpSource` remains, auto-detecting four common listing formats, and covers
+local folders and any future host.
+
+Two useful properties fell out: the album honours range requests, so metadata
+reads stay tiny, and it already generates thumbnails, so the viewer can use
+those rather than this project building its own.
 
 Deliberate behaviour: a listing that parses to **zero images throws** rather
 than writing an empty manifest, because "successful but empty" is the failure
@@ -130,9 +140,10 @@ real EXIF along a synthetic route, including deliberately awkward cases.
 bounds, skip reporting, CLI with `--probe`. 25 tests, clean typecheck. Verified
 end-to-end against a mock host: 12 photos mapped, 2 correctly skipped.
 
-**P2 — Connect the real host. Next, blocked on egress.** Run `--probe` against
-`upload.d0b0.lv`, add a listing parser if it serves a shape not yet covered,
-confirm EXIF survives upload.
+**P2 — Connect the real host. Done.** API discovered from the upload page's own
+JavaScript (`/api/files`, `/file`, `/thumb`), `D0b0Source` implemented, cookie
+auth wired, run against the live album. Confirmed EXIF survives upload but
+coordinates do not — see R1.
 
 **P3 — Viewer.** MapLibre, route line, photo pins, clustering, lightbox,
 password gate. *Milestone: the trip on a map.*
@@ -148,12 +159,13 @@ position is never presented as a measured one.
 
 ## 6. Risks
 
-**R1 — Upload service strips or re-encodes EXIF (high impact, unknown
-likelihood).** Many upload services re-encode on ingest and discard metadata. If
-`upload.d0b0.lv` does, the data this project depends on is already gone and
-ingest must run against the originals. **This is the one risk that invalidates
-the approach rather than merely complicating it — check it first**, via
-`--probe` followed by one real photo.
+**R1 — RESOLVED, and it fired: photos arrive without coordinates.** The upload
+service is innocent; it preserves EXIF faithfully. The phones are redacting
+location before upload — GPS tags arrive present but nulled, the signature of
+Android's photo picker withholding location from an app without
+`ACCESS_MEDIA_LOCATION`. 0 of 7 files currently carry coordinates. Timestamps
+survive intact via `OffsetTimeOriginal`. See README "The blocker"; the next step
+is a control upload from desktop, not a code change.
 
 **R2 — Unknown listing format (low).** Mitigated by auto-detection across four
 formats and a clear failure message naming the file to edit.

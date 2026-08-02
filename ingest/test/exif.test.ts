@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractMetadata, gpsTimestampToUtc } from '../src/exif.js';
+import { extractMetadata, gpsTimestampToUtc, offsetTimeToUtc, resolveTime } from '../src/exif.js';
 import { makePhoto } from './helpers/fixtures.js';
 
 const ref = { id: 'x', filename: 'x.jpg', location: '/x.jpg' };
@@ -86,4 +86,49 @@ test('treats 0,0 as a missing fix rather than Null Island', async () => {
   const result = await extractMetadata(ref, await makePhoto({ lat: 0, lon: 0 }));
   assert.equal(result.ok, false);
   assert.ok(result.ok === false && result.reason === 'no-gps-coords');
+});
+
+test('offsetTimeToUtc resolves a wall clock plus its UTC offset', () => {
+  // The exact shape both phones in the real album write.
+  const d = offsetTimeToUtc('2026:07:13 15:11:16', '+03:00');
+  assert.equal(d?.toISOString(), '2026-07-13T12:11:16.000Z');
+});
+
+test('offsetTimeToUtc handles negative and unpunctuated offsets', () => {
+  assert.equal(offsetTimeToUtc('2026:07:13 15:11:16', '-05:00')?.toISOString(),
+    '2026-07-13T20:11:16.000Z');
+  assert.equal(offsetTimeToUtc('2026:07:13 15:11:16', '+0530')?.toISOString(),
+    '2026-07-13T09:41:16.000Z');
+});
+
+test('offsetTimeToUtc refuses a wall clock with no offset', () => {
+  // Without a zone this is ambiguous, so it must not silently become UTC.
+  assert.equal(offsetTimeToUtc('2026:07:13 15:11:16', undefined), null);
+  assert.equal(offsetTimeToUtc('2026:07:13 15:11:16', ''), null);
+});
+
+test('resolveTime prefers GPS time and falls back to the offset pair', () => {
+  assert.equal(
+    resolveTime({ GPSDateStamp: '2026:07:14', GPSTimeStamp: '13:32:7' })?.timeSource,
+    'gps',
+  );
+  const fallback = resolveTime({
+    DateTimeOriginal: '2026:07:13 15:11:16',
+    OffsetTimeOriginal: '+03:00',
+  });
+  assert.equal(fallback?.timeSource, 'exif-offset');
+  assert.equal(fallback?.tUtc.toISOString(), '2026-07-13T12:11:16.000Z');
+  assert.equal(resolveTime({ DateTimeOriginal: '2026:07:13 15:11:16' }), null);
+});
+
+test('blanked-out GPS is reported as redacted, not merely absent', async () => {
+  // Android's photo picker leaves the GPS tags in place and nulls their
+  // values, which is what every phone photo in the real album looks like.
+  // Telling that apart from "no fix" is what makes the cause diagnosable.
+  const redacted = await extractMetadata(ref, await makePhoto({ blankGps: true }));
+  assert.equal(redacted.ok, false);
+  assert.ok(redacted.ok === false && redacted.reason === 'gps-redacted');
+
+  const absent = await extractMetadata(ref, await makePhoto({ noGps: true }));
+  assert.ok(absent.ok === false && absent.reason === 'no-gps-coords');
 });
