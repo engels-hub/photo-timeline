@@ -8,6 +8,10 @@ export interface PhotoRef {
   location: string;
   byteSize?: number;
   contentType?: string;
+  /** Server-generated small thumbnail, when the backend offers one. */
+  thumbUrl?: string;
+  /** Server-generated large preview, when the backend offers one. */
+  previewUrl?: string;
 }
 
 /**
@@ -49,6 +53,8 @@ export interface PhotoRecord {
   orientation?: number;
   make?: string;
   model?: string;
+  thumbUrl?: string;
+  previewUrl?: string;
 }
 
 /** A photo that was dropped, and why. Surfaced so the count is never a mystery. */

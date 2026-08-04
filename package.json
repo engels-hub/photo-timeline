@@ -2,10 +2,15 @@
   "name": "photo-timeline",
   "private": true,
   "type": "module",
-  "workspaces": ["ingest"],
+  "workspaces": [
+    "ingest",
+    "web"
+  ],
   "scripts": {
     "ingest": "npm run -w @trip/ingest start --",
     "test": "npm run -w @trip/ingest test",
-    "typecheck": "npm run -w @trip/ingest typecheck"
+    "typecheck": "npm run -w @trip/ingest typecheck",
+    "dev": "npm run -w @trip/web dev",
+    "build": "npm run -w @trip/web build"
   }
 }

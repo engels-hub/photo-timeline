@@ -10,8 +10,8 @@ as a scrubbable timeline — a travel timeline, with your photos as the pins.
 |---|---|
 | Ingest: read photos → `trip.json` | **working**, 30 tests passing |
 | HTTP photo source (`upload.d0b0.lv`) | **connected and running against the live album** |
-| Photos currently mappable | **0 of 7** — see "The blocker" below |
-| Web viewer (map, timeline, password gate) | not started |
+| Photos mapped | **139**, 2,475 km, 25 Jul – 4 Aug |
+| Web viewer (map, timeline, lightbox, password gate) | **working** |
 
 ## Quick start
 
@@ -80,51 +80,68 @@ always explainable:
 Expect anything sent through WhatsApp or Telegram to land in that list —
 those strip EXIF wholesale.
 
-## The blocker: photos are arriving without coordinates
+## Photos uploaded from a phone browser lose their coordinates
 
-The album is connected and ingest runs against it cleanly. The problem is the
-data:
+Solved, and worth recording because it will recur.
+
+Photos uploaded through a **phone** browser arrive with their GPS tags present
+but blanked — `GPSLatitude: [null, null, null]` — while `DateTimeOriginal` and
+`OffsetTimeOriginal` survive untouched. Tags left in place with their values
+emptied indicates redaction, not a camera without a fix; a camera with no fix
+omits the tags entirely. The phone strips location as the file is handed to the
+browser.
+
+The upload service is not at fault: it preserves EXIF faithfully. Photos
+uploaded from a **PC** keep everything, which is how the current 139 got here.
+
+Ingest reports the two cases separately, so the cause stays visible:
 
 ```
-0 photos mapped
-  6 skipped:
-    2 × GPS tags present but blanked out (stripped before upload)
+  7 skipped:
+    3 × GPS tags present but blanked out (stripped before upload)
     3 × no GPS coordinates
     1 × no EXIF block
 ```
 
-**The upload service is not at fault.** It preserves EXIF faithfully — the Pixel
-photo still carries 67 tags including its HDR+ software build. What is missing
-is specifically the location.
+Time is resolved from GPS timestamps when present, falling back to
+`DateTimeOriginal` + `OffsetTimeOriginal`, which is equally exact. A bare
+`DateTimeOriginal` with no offset is refused rather than silently treated as
+UTC.
 
-On the two phone photos the GPS tags are *present but blanked*:
+## The viewer
 
+```bash
+npm run dev      # http://localhost:5173
+npm run build    # -> web/dist
 ```
-GPSLatitude  : [null, null, null]
-GPSLongitude : [null, null, null]
-OffsetTimeOriginal : "+03:00"      ← time survived intact
-```
 
-Tags left in place with their values nulled is the signature of deliberate
-redaction, not of a camera that never got a fix — a camera with no fix omits the
-tags entirely. The most likely culprit is **Android's photo picker, which
-redacts location from images handed to any app lacking the
-`ACCESS_MEDIA_LOCATION` permission** — and a browser upload page goes through
-exactly that picker. In other words, the coordinates are probably being stripped
-by the phone at the moment of upload, and the originals still have them.
+Dark map, the route in orange, a filmstrip and a time scrubber along the bottom.
+Scrubbing reveals the route progressively: travelled portion bright, the rest
+dim, so the shape of the whole trip stays legible from the first day. Press play
+to animate it. Photos are pinned by their coordinates; clicking a pin or a
+filmstrip frame opens the photo with its time, position, altitude and camera.
 
-Worth testing: have someone upload one photo from a desktop browser, copied off
-the phone by cable or cloud sync rather than picked on the phone. If that one
-arrives with coordinates, the diagnosis is confirmed and the fix is a change of
-upload route, not of code.
+A few decisions worth knowing:
 
-### What still works
+- **Layers are added on `style.load`, not `load`.** MapLibre's `load` waits for
+  basemap tiles, so a blocked or slow tile CDN would leave the trip itself
+  undrawn. The route is our data and must never depend on someone else's server.
+- **Dashed legs are chosen by implied speed, not distance.** On a road trip,
+  consecutive photos are routinely hundreds of kilometres apart simply because
+  nobody photographed the motorway; dashing those makes the whole route look
+  like guesswork. A leg is only dashed when it could not have been travelled on
+  the ground (over 200 km/h implied). For this trip that flags 0 of 138 legs,
+  which is correct — it was driven.
+- **Thumbnails come from the album's own `/thumb` endpoint**, so this project
+  generates no derivatives at all.
+- **The password is a doormat, not a lock.** It keeps a forwarded link from
+  opening to strangers. It ships inside the bundle, so anyone who opens devtools
+  can read it, and the photo URLs are fetchable directly regardless. Real
+  protection would be HTTP basic auth at the web server.
 
-Timestamps are intact and unambiguous. Both phones write
-`OffsetTimeOriginal`, so `2026:07:13 15:11:16` + `+03:00` resolves to an exact
-`2026-07-13T12:11:16Z` with no guessing. If coordinates cannot be recovered,
-photos can still be placed by matching those timestamps against a GPS track
-exported from someone's phone — the "cool to have" becomes the main mechanism.
+Photos load from `upload.d0b0.lv`, which requires the `trip_auth` cookie. Hosted
+under any `*.d0b0.lv` subdomain the browser sends that cookie automatically;
+served from anywhere else the images will 403.
 
 ## Using the album
 

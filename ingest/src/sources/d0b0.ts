@@ -85,6 +85,10 @@ export class D0b0Source extends HttpSource {
         id: file.name,
         filename: file.name,
         location: this.fileUrl(file.name),
+        // The album renders its own thumbnails, so the viewer never needs this
+        // project to generate derivatives.
+        thumbUrl: this.thumbUrl(file.name),
+        previewUrl: this.thumbUrl(file.name, true),
         ...(typeof file.size === 'number' ? { byteSize: file.size } : {}),
       };
     }

@@ -56,7 +56,12 @@ export async function ingest(options: IngestOptions): Promise<Manifest> {
       try {
         const result = await readMetadata(source, ref);
         if (result.ok) {
-          record = { ...result.record, location: ref.location };
+          record = {
+            ...result.record,
+            location: ref.location,
+            ...(ref.thumbUrl ? { thumbUrl: ref.thumbUrl } : {}),
+            ...(ref.previewUrl ? { previewUrl: ref.previewUrl } : {}),
+          };
           photos.push(record);
         } else {
           skipped.push({ filename: ref.filename, reason: result.reason, detail: result.detail });

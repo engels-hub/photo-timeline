@@ -5,3 +5,5 @@ out/
 .DS_Store
 .env
 photos/
+web/dist/
+*.tsbuildinfo
