@@ -1,0 +1,12 @@
+node_modules/
+dist/
+out/
+*.log
+.DS_Store
+.env
+photos/
+web/dist/
+*.tsbuildinfo
+
+.env.local
+.env.*.local

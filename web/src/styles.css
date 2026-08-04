@@ -1,0 +1,451 @@
+/* Palette borrowed from the existing upload page so the two feel like one site. */
+:root {
+  --bg: #0a0a0a;
+  --panel: #111;
+  --border: #222;
+  --accent: #ffb340;
+  --muted: #8a7a5a;
+  --text: #e0e0e0;
+  --strip-h: 84px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ---------- header ---------- */
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.brand {
+  color: var(--accent);
+  font-weight: bold;
+  white-space: nowrap;
+}
+.brand span {
+  color: #555;
+  font-weight: normal;
+}
+
+header .stats {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+header a {
+  color: #555;
+  text-decoration: none;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+header a:hover {
+  color: var(--accent);
+}
+
+/* ---------- map ---------- */
+
+.map {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.maplibregl-ctrl-attrib {
+  background: rgba(0, 0, 0, 0.6) !important;
+  font-size: 10px;
+}
+.maplibregl-ctrl-attrib a {
+  color: var(--muted) !important;
+}
+
+.map-pin {
+  width: 62px;
+  height: 62px;
+  padding: 0;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  background: var(--panel);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+  position: relative;
+  display: block;
+}
+.map-pin img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+.map-pin-stem {
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 2px;
+  height: 7px;
+  background: var(--accent);
+  transform: translateX(-50%);
+}
+
+/* ---------- timeline ---------- */
+
+.timeline {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.strip {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 6px;
+  height: var(--strip-h);
+  scrollbar-width: thin;
+  scrollbar-color: #333 transparent;
+}
+
+.frame {
+  flex: 0 0 auto;
+  width: 68px;
+  height: 100%;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 5px;
+  background: #000;
+  cursor: pointer;
+  overflow: hidden;
+  opacity: 0.85;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+.frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.frame:hover {
+  opacity: 1;
+}
+.frame.active {
+  border-color: var(--accent);
+  opacity: 1;
+}
+/* Photos the timeline has not reached yet stay visible but recede. */
+.frame.future {
+  opacity: 0.25;
+  filter: grayscale(0.7);
+}
+
+.scrub {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.35rem 0.9rem 0.75rem;
+}
+
+.play {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid #3a2c12;
+  background: #151208;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.78rem;
+  line-height: 1;
+}
+.play:hover {
+  border-color: var(--accent);
+}
+
+.track {
+  position: relative;
+  flex: 1 1 auto;
+  padding-top: 14px;
+}
+
+.ticks {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 14px;
+  pointer-events: none;
+}
+.tick {
+  position: absolute;
+  transform: translateX(-50%);
+  text-align: center;
+}
+.tick i {
+  display: block;
+  width: 1px;
+  height: 4px;
+  background: #3a3a3a;
+  margin: 0 auto;
+}
+.tick em {
+  font-style: normal;
+  font-size: 9px;
+  color: #4d4d4d;
+  white-space: nowrap;
+}
+
+.track input[type='range'] {
+  width: 100%;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: #2a2a2a;
+  outline: none;
+}
+.track input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+}
+.track input[type='range']::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+}
+
+.readout {
+  flex: 0 0 auto;
+  text-align: right;
+  line-height: 1.25;
+  min-width: 120px;
+}
+.readout strong {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+.readout span {
+  font-size: 0.72rem;
+  color: #555;
+}
+
+/* ---------- lightbox ---------- */
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.93);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.lb-body {
+  max-width: 94vw;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.lb-body img {
+  max-width: 94vw;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.lb-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.78rem;
+}
+.lb-bar strong {
+  color: var(--accent);
+  display: block;
+  font-weight: 600;
+}
+.lb-bar span {
+  color: #666;
+}
+.lb-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+.lb-actions .counter {
+  color: #444;
+}
+.lb-actions a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.lb-actions a:hover {
+  color: var(--accent);
+}
+
+.lb-nav,
+.lb-close {
+  position: absolute;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  line-height: 1;
+}
+.lb-nav {
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 3rem;
+  padding: 0 1.2rem;
+}
+.lb-nav:hover,
+.lb-close:hover {
+  color: var(--accent);
+}
+.lb-nav.prev {
+  left: 0;
+}
+.lb-nav.next {
+  right: 0;
+}
+.lb-close {
+  top: 1rem;
+  right: 1.3rem;
+  font-size: 1.5rem;
+}
+
+/* ---------- gate & status ---------- */
+
+.gate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 1rem;
+}
+.gate form {
+  width: 100%;
+  max-width: 320px;
+  text-align: center;
+}
+.gate h1 {
+  color: var(--accent);
+  font-size: 1.3rem;
+  margin-bottom: 0.4rem;
+}
+.gate h1 span {
+  color: #555;
+  font-weight: normal;
+}
+.gate p {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin-bottom: 1.4rem;
+}
+.gate input {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  background: #151208;
+  border: 1px solid #4a3510;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 1rem;
+  margin-bottom: 0.6rem;
+}
+.gate input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.gate button {
+  width: 100%;
+  padding: 0.7rem;
+  background: var(--accent);
+  color: #1a1200;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.gate .error {
+  color: #e06b5a;
+  font-size: 0.8rem;
+  margin-top: 0.8rem;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 2rem;
+  text-align: center;
+}
+.status.error {
+  color: #e06b5a;
+}
+
+/* ---------- small screens ---------- */
+
+@media (max-width: 640px) {
+  :root {
+    --strip-h: 66px;
+  }
+  header .stats {
+    font-size: 0.7rem;
+  }
+  .frame {
+    width: 54px;
+  }
+  .readout {
+    min-width: 0;
+  }
+  .readout span {
+    display: none;
+  }
+  .lb-nav {
+    font-size: 2rem;
+    padding: 0 0.6rem;
+  }
+}
