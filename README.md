@@ -13,28 +13,52 @@ as a scrubbable timeline — a travel timeline, with your photos as the pins.
 | Photos mapped | **139**, 2,475 km, 25 Jul – 4 Aug |
 | Web viewer (map, timeline, lightbox, password gate) | **working** |
 
-## Quick start
+## Running it locally
+
+Needs **Node 20+** (developed on 22).
 
 ```bash
 npm install
 
-# See what a photo host exposes, without ingesting anything
-npm run ingest -- --probe --url https://upload.d0b0.lv/trip
+# The dev server needs the album cookie to fetch photos — see below.
+cp web/.env.example web/.env.local
+# …paste the trip_auth value into web/.env.local…
 
-# Build the manifest
-npm run ingest -- --url https://upload.d0b0.lv/trip --out web/public/trip.json
-
-# Or from a local folder
-npm run ingest -- --dir ~/Pictures/trip
-
-npm test
-npm run typecheck
+npm run dev          # http://localhost:5173
 ```
 
-If the listing needs authentication, pass headers through:
+That is enough to browse the trip: `web/public/trip.json` is committed, so the
+viewer has data without re-running ingest. The viewer password is `Mikro2026`
+(override with `VITE_TRIP_PASSWORD`).
+
+**Why the cookie is needed locally.** Photos live on `upload.d0b0.lv` behind a
+`trip_auth` cookie. Served from `localhost`, requests to that host are
+cross-site, so the browser withholds the cookie — it is `SameSite=Lax` — and
+every image returns 403. The dev server therefore proxies photo requests under
+`/d0b0/*` and attaches the cookie server-side. None of this applies in
+production: served from a `*.d0b0.lv` subdomain the requests are same-site and
+the browser sends the cookie itself.
+
+Without the cookie the map, route and timeline still work — only the images will
+be missing.
+
+### Refreshing the photos
+
+The trip is ongoing, so re-run ingest whenever more get uploaded:
 
 ```bash
-npm run ingest -- --url https://upload.d0b0.lv/trip --header "Authorization: Bearer …"
+export TRIP_AUTH_COOKIE='trip_auth=…'
+npm run ingest -- --d0b0 --out web/public/trip.json
+```
+
+### Other commands
+
+```bash
+npm run build        # production bundle -> web/dist
+npm test             # ingest test suite (30 tests)
+npm run typecheck
+npm run ingest -- --dir ~/Pictures/trip    # ingest a local folder instead
+npm run ingest -- --probe --url <url>      # inspect a host without ingesting
 ```
 
 ## How it works

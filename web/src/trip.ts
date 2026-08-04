@@ -17,9 +17,27 @@ export async function loadTrip(url = 'trip.json'): Promise<Trip> {
   return buildTrip(manifest);
 }
 
+const ALBUM_ORIGIN = 'https://upload.d0b0.lv';
+
+/**
+ * Route photo URLs through the dev-server proxy so the cookie is attached.
+ * See web/vite.config.ts. A no-op in production builds.
+ */
+function localise(url: string | undefined): string | undefined {
+  if (!url || !import.meta.env.DEV) return url;
+  return url.startsWith(ALBUM_ORIGIN) ? `/d0b0${url.slice(ALBUM_ORIGIN.length)}` : url;
+}
+
 export function buildTrip(manifest: Manifest): Trip {
   const photos: TripPhoto[] = manifest.photos
-    .map((p) => ({ ...p, t: Date.parse(p.tUtc), index: 0 }))
+    .map((p) => ({
+      ...p,
+      location: localise(p.location)!,
+      thumbUrl: localise(p.thumbUrl),
+      previewUrl: localise(p.previewUrl),
+      t: Date.parse(p.tUtc),
+      index: 0,
+    }))
     .sort((a, b) => a.t - b.t)
     .map((p, index) => ({ ...p, index }));
 

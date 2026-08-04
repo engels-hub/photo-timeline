@@ -7,3 +7,6 @@ out/
 photos/
 web/dist/
 *.tsbuildinfo
+
+.env.local
+.env.*.local
